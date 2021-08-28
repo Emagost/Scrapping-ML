@@ -11,42 +11,44 @@ const puppeteer = require('puppeteer');
     /* Enter to page,search IPhone 11 and take screenshot */
     await page.type('.nav-search-input', 'IPhone 11');
     await page.click('.nav-search-btn');
-    await page.waitForXPath('//*[@id="root-app"]/div/div/section/ol/li[1]/div/div');
+    await page.waitForSelector("li.ui-search-layout__item");
 
     /* Here push the info of the article on empty array  */
     const href = await page.evaluate(()=>{
-        const elements = document.querySelectorAll('.ui-search-item__group__element');
+        const elements = document.querySelectorAll(".ui-search-item__group--title a.ui-search-item__group__element");
+
         const links = [];
+
         for (let element of elements){
                 links.push(element.href);
         }
         return links;
     });
-    console.log (href);
         /* Created an array to put the information inside  */
         const iPhoneInfo = [];
 
         /* Here wait for charge selector (title) and move around links */
         for (let hrefs of href){
             await page.goto(hrefs);
-            await page.waitForTimeout(3000);
+            await page.waitForSelector(".ui-pdp-header__title-container");
              /* Extract the information of article (title and price) and return */
             const phone = await page.evaluate(()=>{
                 const tpm = {};
-                    tpm.title = document.getElementsByClassName('ui-pdp-title').innerText;
-                    tpm.price = document.getElementsByClassName('.price-tag-fraction').innerText;
-                return tpm;
+                try{
+                        tpm.title = document.querySelector(".ui-pdp-title").innerText.includes("iPhone 11") && !document.querySelector(".ui-pdp-title").innerText.includes("Pro") ? document.querySelector(".ui-pdp-title").innerText : null;
+                        tpm.price = parseFloat(document.querySelector(".price-tag-fraction").innerText) * 1000;
+                    return tpm;
+                }catch(error){
+                    console.log (error);
+                }
             });
-            /* push information */
-            if (phone.title === undefined){
-                console.log ('null')
-            }
-            else{
-                iPhoneInfo.push(phone);
-            }
+
+        phone.link = href;
+
+        if (phone.title && phone.price > 170000) iPhoneInfo.push(phone);
         }
 
-        console.log (iPhoneInfo);
+        console.log (iPhoneInfo, iPhoneInfo.length);
     /* close browser */
     await browser.close();
 })();
